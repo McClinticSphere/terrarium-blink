@@ -1,74 +1,82 @@
 #include "daisy_petal.h"
 #include "terrarium.h"
 
-// Use the daisy namespace to prevent having to type 
-// daisy:: before all libdaisy functions
 using namespace daisy;
-// Use the terrarium namespace to prevent having to type
-// terrarium:: before all terrarium switch constants
 using namespace terrarium;
 
-// Declare a DaisySeed object called hardware
 DaisyPetal hardware;
 
-dsy_gpio led1;
-dsy_gpio led2;
+dsy_gpio left_led;
+int left_led_pin = 22;
+int left_led_state = false;
+dsy_gpio right_led;
+int right_led_pin = 23;
+int right_led_state = false;
+
+bool left_footswitch_pressed;
+bool right_footswitch_pressed;
+bool switch_one_pressed;
+bool switch_two_pressed;
+bool switch_three_pressed;
+bool switch_four_pressed;
 
 int main(void)
 {
-    // Declare a variable to store the state we want to set for the LED.
-    bool led_state;
-    led_state = true;
+    bool pcb_led_state;
+    pcb_led_state = true;
 
-    // Configure and Initialize the Terrarium
     hardware.Init();
 
-    led1.pin = hardware.seed.GetPin(22);
-    led1.mode = DSY_GPIO_MODE_OUTPUT_PP;
-    led1.pull = DSY_GPIO_NOPULL;
-    dsy_gpio_init(&led1);
+    left_led.pin = hardware.seed.GetPin(left_led_pin);
+    left_led.mode = DSY_GPIO_MODE_OUTPUT_PP;
+    left_led.pull = DSY_GPIO_NOPULL;
+    dsy_gpio_init(&left_led);
 
-    led2.pin = hardware.seed.GetPin(23);
-    led2.mode = DSY_GPIO_MODE_OUTPUT_PP;
-    led1.pull = DSY_GPIO_NOPULL; 
-    dsy_gpio_init(&led2);
-    dsy_gpio_toggle(&led2);
+    right_led.pin = hardware.seed.GetPin(right_led_pin);
+    right_led.mode = DSY_GPIO_MODE_OUTPUT_PP;
+    left_led.pull = DSY_GPIO_NOPULL; 
+    dsy_gpio_init(&right_led);
+    dsy_gpio_toggle(&right_led);
 
-    // Loop forever
     for(;;)
     {
-        // Set the onboard LED
-        hardware.seed.SetLed(led_state);
-        
-        // Toggle the LED state for the next time around.
+        hardware.seed.SetLed(pcb_led_state);
+        dsy_gpio_write(&left_led, left_led_state);
+        dsy_gpio_write(&right_led, right_led_state);
+
         hardware.DebounceControls();
         hardware.UpdateAnalogControls();
 
-        if (hardware.switches[Terrarium::FOOTSWITCH_1].Pressed()) {
+        left_footswitch_pressed = hardware.switches[Terrarium::FOOTSWITCH_1].Pressed();
+        right_footswitch_pressed = hardware.switches[Terrarium::FOOTSWITCH_2].Pressed();
 
-            dsy_gpio_write(&led1, true);
+        switch_one_pressed = hardware.switches[Terrarium::SWITCH_1].Pressed() || hardware.switches[Terrarium::SWITCH_1].RisingEdge();
+        switch_two_pressed = hardware.switches[Terrarium::SWITCH_2].Pressed() || hardware.switches[Terrarium::SWITCH_2].RisingEdge();
+        switch_three_pressed = hardware.switches[Terrarium::SWITCH_3].Pressed() || hardware.switches[Terrarium::SWITCH_3].RisingEdge();
+        switch_four_pressed = hardware.switches[Terrarium::SWITCH_4].Pressed() || hardware.switches[Terrarium::SWITCH_4].RisingEdge();
 
+        if (left_footswitch_pressed) {
+            left_led_state = true;
         } else {
-
-            if (hardware.switches[Terrarium::SWITCH_1].Pressed() or hardware.switches[Terrarium::SWITCH_1].RisingEdge()) {
-                dsy_gpio_toggle(&led1);
-            } else if (!hardware.switches[Terrarium::SWITCH_1].Pressed() or hardware.switches[Terrarium::SWITCH_1].FallingEdge()) {
-                dsy_gpio_write(&led1, false);
+            if (switch_one_pressed && switch_two_pressed) {
+                left_led_state = !left_led_state;
+            } else {
+                left_led_state = false;
             }
-
         }
 
-        hardware.DebounceControls();
-        hardware.UpdateAnalogControls();
-
-        if (hardware.switches[Terrarium::SWITCH_2].Pressed() or hardware.switches[Terrarium::SWITCH_2].RisingEdge()) {
-            dsy_gpio_toggle(&led2);
-        } else if (!hardware.switches[Terrarium::SWITCH_2].Pressed() or hardware.switches[Terrarium::SWITCH_2].FallingEdge()) {
-            dsy_gpio_write(&led2, false);
+        if (right_footswitch_pressed) {
+            right_led_state = true;
+        } else {
+            if (switch_three_pressed && switch_four_pressed) {
+                right_led_state = !right_led_state;
+            } else {
+                right_led_state = false;
+            }
         }
 
-        led_state = !led_state;
+        pcb_led_state = !pcb_led_state;
 
-        dsy_system_delay(100);
+        dsy_system_delay(250);
     }
 }
