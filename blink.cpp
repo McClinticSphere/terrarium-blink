@@ -6,6 +6,8 @@ using namespace terrarium;
 
 DaisyPetal hardware;
 
+Parameter wait_time;
+
 dsy_gpio left_led;
 int left_led_pin = 22;
 int left_led_state = false;
@@ -20,12 +22,24 @@ bool switch_two_pressed;
 bool switch_three_pressed;
 bool switch_four_pressed;
 
+
+void callback(float *in, float *out, size_t size)
+{
+    for (size_t i = 0; i < size; i+=2)
+        out[i] = in[i];
+}
+
 int main(void)
 {
     bool pcb_led_state;
     pcb_led_state = true;
 
     hardware.Init();
+
+    wait_time.Init(hardware.knob[Terrarium::KNOB_1], 0.0f, 1.0f, Parameter::LINEAR);
+
+    hardware.StartAdc();
+    hardware.StartAudio(callback);
 
     left_led.pin = hardware.seed.GetPin(left_led_pin);
     left_led.mode = DSY_GPIO_MODE_OUTPUT_PP;
@@ -77,6 +91,10 @@ int main(void)
 
         pcb_led_state = !pcb_led_state;
 
-        dsy_system_delay(250);
+        hardware.DebounceControls();
+        hardware.UpdateAnalogControls();
+
+        int t = 100 - (1000 * (int)wait_time.Process());
+        dsy_system_delay(t);
     }
 }
