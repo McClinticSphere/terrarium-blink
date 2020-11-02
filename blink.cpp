@@ -22,11 +22,18 @@ bool switch_two_pressed;
 bool switch_three_pressed;
 bool switch_four_pressed;
 
+int t;
+
 
 void callback(float *in, float *out, size_t size)
 {
+    hardware.DebounceControls();
+    hardware.UpdateAnalogControls();
+
+    wait_time.Process();
     for (size_t i = 0; i < size; i+=2)
-        out[i] = in[i];
+        out[i]     = in[i];
+        out[i + 1] = in[i + 1];
 }
 
 int main(void)
@@ -35,11 +42,10 @@ int main(void)
     pcb_led_state = true;
 
     hardware.Init();
-
-    wait_time.Init(hardware.knob[Terrarium::KNOB_1], 0.0f, 1.0f, Parameter::LINEAR);
-
     hardware.StartAdc();
     hardware.StartAudio(callback);
+
+    wait_time.Init(hardware.knob[Terrarium::KNOB_1], 0.0f, 1000.0f, Parameter::LINEAR);
 
     left_led.pin = hardware.seed.GetPin(left_led_pin);
     left_led.mode = DSY_GPIO_MODE_OUTPUT_PP;
@@ -91,10 +97,7 @@ int main(void)
 
         pcb_led_state = !pcb_led_state;
 
-        hardware.DebounceControls();
-        hardware.UpdateAnalogControls();
-
-        int t = 100 - (1000 * (int)wait_time.Process());
+        t = 1000 - (int)wait_time.Value();
         dsy_system_delay(t);
     }
 }
